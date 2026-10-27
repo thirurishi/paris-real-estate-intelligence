@@ -1,0 +1,25 @@
+# Data handling
+pandas>=2.2
+numpy>=1.26
+duckdb>=1.1
+requests>=2.32
+tqdm>=4.66
+
+# Geospatial
+geopandas>=1.0
+shapely>=2.0
+pyproj>=3.6
+folium>=0.17
+
+# Visualisation
+matplotlib>=3.8
+seaborn>=0.13
+
+# Machine learning and explainability
+scikit-learn>=1.5
+xgboost>=2.1
+shap>=0.46
+
+# Notebooks
+jupyter>=1.0
+ipykernel>=6.29
