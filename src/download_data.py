@@ -60,14 +60,44 @@ def setup_logging() -> None:
     logger.addHandler(file_handler)
 
 
+def file_url(year: int) -> str:
+    return f"{BASE_URL}/{year}/departements/{DEPARTEMENT}.csv.gz"
+
+
+def year_is_online(session: requests.Session, year: int) -> bool:
+    """Check that the Paris file exists for a given year without downloading it."""
+    try:
+        with session.get(file_url(year), stream=True, timeout=TIMEOUT_SECONDS) as response:
+            return response.status_code == 200
+    except requests.RequestException:
+        return False
+
+
 def available_years(session: requests.Session) -> list[int]:
-    """Read the folder listing on data.gouv.fr and return the years published."""
-    response = session.get(f"{BASE_URL}/", timeout=TIMEOUT_SECONDS)
-    response.raise_for_status()
-    # The listing is a simple HTML page with links such as href="2023/"
-    years = sorted({int(y) for y in re.findall(r'href="(20\d{2})/"', response.text)})
+    """Return the years published on data.gouv.fr.
+
+    First try to read the folder listing. Its HTML format has changed before,
+    so if no year is found there, fall back to checking the file URL directly
+    for each of the last 10 years.
+    """
+    try:
+        response = session.get(f"{BASE_URL}/", timeout=TIMEOUT_SECONDS)
+        response.raise_for_status()
+        # Accept relative or absolute links: href="2023/", href="./2023/", href="/geo-dvf/.../2023/"
+        years = sorted({int(y) for y in re.findall(r'href="[^"]*?\b(20\d{2})/?"', response.text)})
+        if years:
+            return years
+        logger.warning("Folder listing returned no years, checking file URLs one by one instead")
+    except requests.RequestException as exc:
+        logger.warning("Could not read folder listing (%s), checking file URLs one by one instead", exc)
+
+    this_year = date.today().year
+    years = [y for y in range(this_year - 9, this_year + 1) if year_is_online(session, y)]
     if not years:
-        raise RuntimeError(f"No year folders found at {BASE_URL}/ - has the site layout changed?")
+        raise RuntimeError(
+            f"No DVF file found under {BASE_URL}/. Check the site in a browser, "
+            "or pass years explicitly: python src/download_data.py --years 2021 2022 2023 2024 2025"
+        )
     return years
 
 
@@ -129,7 +159,7 @@ def main() -> int:
 
         failures = []
         for year in years:
-            url = f"{BASE_URL}/{year}/departements/{DEPARTEMENT}.csv.gz"
+            url = file_url(year)
             destination = RAW_DIR / f"dvf_{DEPARTEMENT}_{year}.csv.gz"
 
             if destination.exists() and not args.force:
