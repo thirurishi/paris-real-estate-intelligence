@@ -8,6 +8,11 @@ Files are organised as:  <BASE_URL>/<year>/departements/<dept>.csv.gz
 By default the script detects which years are online and downloads the last
 5 COMPLETE years (the most recent year is usually partial, so it is skipped).
 
+It also downloads two small reference files into data/external/ for the maps:
+  - arrondissements.geojson : arrondissement boundaries (opendata.paris.fr, ODbL)
+  - stations_idf.geojson    : rail stations of Ile-de-France incl. metro and RER
+                              (Ile-de-France Mobilites open data, ODbL)
+
 Usage:
     python src/download_data.py                     # last 5 complete years
     python src/download_data.py --years 2021 2022   # specific years
@@ -35,7 +40,15 @@ N_YEARS = 5
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
+EXTERNAL_DIR = PROJECT_ROOT / "data" / "external"
 LOG_DIR = PROJECT_ROOT / "logs"
+
+EXTERNAL_FILES = {
+    "arrondissements.geojson":
+        "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/arrondissements/exports/geojson",
+    "stations_idf.geojson":
+        "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/emplacement-des-gares-idf/exports/geojson",
+}
 
 TIMEOUT_SECONDS = 60
 CHUNK_SIZE = 1024 * 1024  # 1 MB
@@ -157,7 +170,7 @@ def main() -> int:
             years = pick_last_complete_years(online, N_YEARS)
         logger.info("Years to download: %s", years)
 
-        failures = []
+        failures: list[int | str] = []
         for year in years:
             url = file_url(year)
             destination = RAW_DIR / f"dvf_{DEPARTEMENT}_{year}.csv.gz"
@@ -176,8 +189,22 @@ def main() -> int:
                 logger.error("FAILED   %s: %s", url, exc)
                 failures.append(year)
 
+        EXTERNAL_DIR.mkdir(parents=True, exist_ok=True)
+        for name, url in EXTERNAL_FILES.items():
+            destination = EXTERNAL_DIR / name
+            if destination.exists() and destination.stat().st_size > 0 and not args.force:
+                logger.info("SKIP     %s already exists (%.1f MB)", name, destination.stat().st_size / 1e6)
+                continue
+            try:
+                logger.info("DOWNLOAD %s", url)
+                download_file(session, url, destination)
+                logger.info("OK       %s (%.1f MB)", name, destination.stat().st_size / 1e6)
+            except requests.RequestException as exc:
+                logger.error("FAILED   %s: %s", url, exc)
+                failures.append(name)
+
     if failures:
-        logger.error("Finished with errors for years: %s", failures)
+        logger.error("Finished with errors for: %s", failures)
         return 1
     logger.info("All files are in %s", RAW_DIR)
     return 0
