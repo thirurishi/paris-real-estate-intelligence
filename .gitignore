@@ -28,3 +28,7 @@ desktop.ini
 
 # --- Trained models (re-created by src/train_model.py) ---
 models/
+
+# --- Power BI: sale-level exports and the .pbix (contains data) stay local ---
+data/powerbi/
+*.pbix
