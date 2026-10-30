@@ -25,3 +25,6 @@ desktop.ini
 
 # --- Secrets ---
 .env
+
+# --- Trained models (re-created by src/train_model.py) ---
+models/
