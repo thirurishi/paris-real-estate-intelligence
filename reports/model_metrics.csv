@@ -1,0 +1,5 @@
+model,MAE_eur_m2,MAPE_pct,R2
+Baseline (arrondissement median),1868.0,20.11,0.289
+Linear regression,1761.0,16.98,0.307
+Random Forest,1601.0,15.82,0.438
+XGBoost,1592.0,15.73,0.438

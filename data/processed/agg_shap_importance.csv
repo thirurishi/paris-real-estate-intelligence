@@ -1,0 +1,10 @@
+feature,mean_abs_shap,approx_avg_effect_pct
+months_since_start,0.07534942,7.5
+longitude,0.065271035,6.5
+arrondissement,0.05173075,5.2
+latitude,0.041012973,4.1
+dist_centre_m,0.034284525,3.4
+surface_reelle_bati,0.018065216,1.8
+nombre_pieces_principales,0.015062503,1.5
+has_dependency,0.012674922,1.3
+dist_metro_m,0.0053437464,0.5
