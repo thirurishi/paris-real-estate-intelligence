@@ -1,8 +1,9 @@
 """
 Build the DuckDB database from the raw DVF files.
 
-Runs every file in sql/ in alphabetical order (01_staging.sql, 02_clean_sales.sql, ...)
-against data/paris_dvf.duckdb, then prints and exports the cleaning funnel.
+Runs every file in sql/ in alphabetical order (01_staging.sql, 02_clean_sales.sql,
+03_analysis.sql) against data/paris_dvf.duckdb, then exports the cleaning funnel and
+every aggregated agg_* table to data/processed/ as CSV.
 
 Usage:
     python src/build_database.py
@@ -76,6 +77,14 @@ def main() -> int:
             FROM clean_sales
         """).df()
         print("\nclean_sales price per m2 (EUR)\n" + check.to_string(index=False))
+
+        # Export every aggregated table (agg_*) for Power BI and the notebooks.
+        agg_tables = [r[0] for r in con.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'agg_%' ORDER BY 1"
+        ).fetchall()]
+        for table in agg_tables:
+            con.execute(f"SELECT * FROM {table}").df().to_csv(PROCESSED_DIR / f"{table}.csv", index=False)
+        logger.info("EXPORT   %d aggregated tables to %s: %s", len(agg_tables), PROCESSED_DIR, agg_tables)
 
     logger.info("Database written to %s", DB_PATH)
     logger.info("Funnel exported to %s", PROCESSED_DIR / "cleaning_funnel.csv")
