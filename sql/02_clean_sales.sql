@@ -13,7 +13,9 @@
 --   4. valid price                     - valeur_fonciere present and > 0
 --   5. surface_reelle_bati >= 9 m2     - legal minimum for a home
 --   6. valid arrondissement 1-20       - from INSEE code 75101-75120
---   7. outliers removed                - 1st-99th percentile of price per m2,
+--   7. price per m2 >= 3,000 EUR       - removes non-market transfers (symbolic
+--                                        prices, family sales, partial lots)
+--   8. outliers removed                - 1st-99th percentile of price per m2,
 --                                        computed per arrondissement
 -- =============================================================================
 
@@ -82,7 +84,20 @@ FROM step5_surface
 WHERE TRY_CAST(code_commune AS INTEGER) BETWEEN 75101 AND 75120;
 
 
--- Step 7: remove outliers per arrondissement -----------------------------------
+-- Step 7: absolute floor on price per m2 ---------------------------------------
+-- The first build showed 3,843 sales still under 3,000 EUR/m2 after the
+-- percentile filter (minimum 11 EUR/m2). The cheapest arrondissements have
+-- medians around 8,000-9,000 EUR/m2, so these are not market prices: symbolic
+-- or family transfers, or a price recorded for part of a lot. The percentile
+-- filter alone can't catch them because they make up more than 1% of some
+-- arrondissements. The floor is applied BEFORE computing the percentiles so
+-- these values don't distort the bounds.
+CREATE OR REPLACE TABLE step7_price_floor AS
+SELECT * FROM step6_arrondissement
+WHERE price_per_m2 >= 3000;
+
+
+-- Step 8: remove outliers per arrondissement -----------------------------------
 -- A single Paris-wide cut-off would be wrong: 12,000 EUR/m2 is normal in the 6th
 -- but high in the 19th. So bounds are computed inside each arrondissement.
 CREATE OR REPLACE TABLE outlier_bounds AS
@@ -90,7 +105,7 @@ SELECT
     arrondissement,
     QUANTILE_CONT(price_per_m2, 0.01) AS p01,
     QUANTILE_CONT(price_per_m2, 0.99) AS p99
-FROM step6_arrondissement
+FROM step7_price_floor
 GROUP BY arrondissement;
 
 CREATE OR REPLACE TABLE clean_sales AS
@@ -110,7 +125,7 @@ SELECT
     s.n_dependencies,
     s.longitude,
     s.latitude
-FROM step6_arrondissement AS s
+FROM step7_price_floor AS s
 JOIN outlier_bounds AS b USING (arrondissement)
 WHERE s.price_per_m2 BETWEEN b.p01 AND b.p99;
 
@@ -125,7 +140,8 @@ WITH steps AS (
     UNION ALL SELECT 3, 'Price present and > 0',                                (SELECT COUNT(*) FROM step4_valid_price)
     UNION ALL SELECT 4, 'Surface >= 9 m2',                                      (SELECT COUNT(*) FROM step5_surface)
     UNION ALL SELECT 5, 'Valid arrondissement (1-20)',                          (SELECT COUNT(*) FROM step6_arrondissement)
-    UNION ALL SELECT 6, 'Price per m2 within 1st-99th pct of its arrondissement', (SELECT COUNT(*) FROM clean_sales)
+    UNION ALL SELECT 6, 'Price per m2 >= 3,000 EUR (non-market transfers)',      (SELECT COUNT(*) FROM step7_price_floor)
+    UNION ALL SELECT 7, 'Price per m2 within 1st-99th pct of its arrondissement', (SELECT COUNT(*) FROM clean_sales)
 )
 SELECT
     step_order,
@@ -144,3 +160,4 @@ DROP TABLE step3_one_apartment;
 DROP TABLE step4_valid_price;
 DROP TABLE step5_surface;
 DROP TABLE step6_arrondissement;
+DROP TABLE step7_price_floor;
