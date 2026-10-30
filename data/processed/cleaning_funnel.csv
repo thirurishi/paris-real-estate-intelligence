@@ -1,0 +1,9 @@
+step_order,step,sales_remaining,removed,pct_of_start
+0,All sales (distinct id_mutation),207365,,100.0
+1,Standard sales only (Vente),204461,2904,98.6
+2,Exactly one apartment (cellar/parking allowed),149673,54788,72.2
+3,Price present and > 0,149617,56,72.2
+4,Surface >= 9 m2,148640,977,71.7
+5,Valid arrondissement (1-20),148640,0,71.7
+6,"Price per m2 >= 3,000 EUR (non-market transfers)",143311,5329,69.1
+7,Price per m2 within 1st-99th pct of its arrondissement,140425,2886,67.7
