@@ -130,7 +130,7 @@ Power BI's **Shape map** is a preview feature. Turn it on once: **File** → **O
 
 1. Add a **Shape map** visual.
 2. **Location:** `Arrondissement[map_name]`. **Color saturation:** `Median Price m2`.
-3. Format pane → **Map settings** → **Map type: Custom map** → **Add a map type** → choose `dashboard/arrondissements.topojson` from the project.
+3. Format pane → **Map settings** → **Map type: Custom map** → **Add a map type** → choose `dashboard/arrondissements_map.json` from the project (a TopoJSON file with a `.json` extension, which is what the Power BI file picker expects).
 4. Click **View map keys** and check that the 20 names match. The map file already uses the same names as `map_name`.
 5. **Default color** → set a gradient: minimum light blue, maximum dark blue.
 

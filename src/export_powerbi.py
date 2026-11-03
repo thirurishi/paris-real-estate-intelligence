@@ -5,7 +5,7 @@ Star schema:
   - Sales.csv          : fact table, one row per clean sale. No id, no address and
                          no coordinates, so rows can't be linked back to a property.
   - Arrondissement.csv : dimension, one row per arrondissement (names match the
-                         TopoJSON map in dashboard/arrondissements.topojson)
+                         TopoJSON map in dashboard/arrondissements_map.json)
   - The Date table is created in Power BI with DAX (see dashboard/POWERBI_GUIDE.md).
 
 Model results (metrics, SHAP importance, gap by arrondissement) are read directly
